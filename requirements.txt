@@ -1,0 +1,25 @@
+# Core
+numpy
+pandas
+
+# RAG
+sentence-transformers
+faiss-cpu
+
+# Document processing
+pypdf
+
+# Configuration
+python-dotenv
+
+# API / application
+fastapi
+uvicorn
+
+# Evaluation
+scikit-learn
+
+# Development
+pytest
+ruff
+pre-commit
