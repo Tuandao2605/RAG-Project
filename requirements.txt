@@ -1,25 +1,25 @@
-# Core
+# Thư viện nền tảng
 numpy
 pandas
 
-# RAG
+# Thành phần RAG
 sentence-transformers
 faiss-cpu
 
-# Document processing
+# Xử lý tài liệu
 pypdf
 
-# Configuration
+# Cấu hình
 python-dotenv
 
-# API / application
+# API / ứng dụng
 fastapi
 uvicorn
 
-# Evaluation
+# Đánh giá
 scikit-learn
 
-# Development
+# Phát triển và kiểm thử
 pytest
 ruff
 pre-commit

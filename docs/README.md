@@ -1,7 +1,6 @@
-## Local development
+## Phát triển local
 
-Create a virtual environment, install the dependencies, and enable the
-pre-commit hooks:
+Tạo virtual environment, cài dependency và kích hoạt hook pre-commit:
 
 ```powershell
 py -3.11 -m venv .venv
@@ -10,24 +9,23 @@ python -m pip install -r requirements.txt
 pre-commit install
 ```
 
-Run the checks manually:
+Chạy các bước kiểm tra thủ công:
 
 ```powershell
 pre-commit run --all-files
 pytest
 ```
 
-## Docker
+## Chạy bằng Docker
 
-The image expects a FastAPI application exposed as `app.main:app` by default.
-Build and run it with:
+Image Docker hiện dùng để kiểm tra môi trường Python. Build và chạy image bằng:
 
 ```powershell
 docker build -t rag-security .
 docker run --rm -p 8000:8000 rag-security
 ```
 
-For another import path, override `APP_MODULE` at build time:
+Nếu ứng dụng sử dụng import path khác, có thể truyền `APP_MODULE` khi build:
 
 ```powershell
 docker build --build-arg APP_MODULE=src.main:app -t rag-security .

@@ -20,8 +20,4 @@ USER app
 
 EXPOSE 8000
 
-ARG APP_MODULE=app.main:app
-ENV APP_MODULE=${APP_MODULE}
-
-//CMD ["sh", "-c", "uvicorn ${APP_MODULE} --host 0.0.0.0 --port 8000"]
 CMD ["python", "--version"]s
