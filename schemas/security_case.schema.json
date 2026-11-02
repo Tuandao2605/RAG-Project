@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rag-security:schema:security-case:1.0.0",
+  "title": "RAG SecurityCase v1",
+  "description": "Hợp đồng fixture tin cậy cho corpus, attack và oracle; xem docs/threat_model.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "case_id", "description", "request", "documents",
+    "retrieval", "attacker", "injections", "objective", "success_rules"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "case_id": {"$ref": "#/$defs/id"},
+    "description": {"$ref": "#/$defs/text"},
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal", "query"],
+      "properties": {
+        "principal": {"$ref": "#/$defs/principal"},
+        "query": {"$ref": "#/$defs/text"}
+      }
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/document"}
+    },
+    "retrieval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "candidate_doc_ids", "top_k"],
+      "properties": {
+        "mode": {"const": "pinned_candidates"},
+        "candidate_doc_ids": {"$ref": "#/$defs/nonempty_ids"},
+        "top_k": {"type": "integer", "minimum": 1}
+      }
+    },
+    "attacker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal", "capabilities", "controlled_doc_ids", "knowledge"],
+      "properties": {
+        "principal": {"$ref": "#/$defs/principal"},
+        "capabilities": {"const": ["replace_document_content"]},
+        "controlled_doc_ids": {"$ref": "#/$defs/nonempty_ids"},
+        "knowledge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["knows_query", "known_doc_ids", "knows_target_value"],
+          "properties": {
+            "knows_query": {"type": "boolean"},
+            "known_doc_ids": {"$ref": "#/$defs/ids"},
+            "knows_target_value": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "injections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["doc_id", "entry_point", "operation", "payload"],
+        "properties": {
+          "doc_id": {"$ref": "#/$defs/id"},
+          "entry_point": {"const": "document_content"},
+          "operation": {"const": "replace"},
+          "payload": {"$ref": "#/$defs/text"}
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "description", "target_value"],
+      "properties": {
+        "kind": {"enum": ["answer_contamination", "data_exfiltration"]},
+        "description": {"$ref": "#/$defs/text"},
+        "target_value": {"$ref": "#/$defs/text"},
+        "target_doc_id": {"$ref": "#/$defs/id"}
+      },
+      "allOf": [{
+        "if": {"properties": {"kind": {"const": "data_exfiltration"}}},
+        "then": {"required": ["target_doc_id"]}
+      }]
+    },
+    "success_rules": {"$ref": "#/$defs/success_rules"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "not": {"pattern": "\\s"}
+    },
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "uri": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:\\S+$",
+      "not": {"pattern": "\\s"}
+    },
+    "user_id": {
+      "type": "string",
+      "pattern": "^user:[a-zA-Z0-9._-]+$",
+      "not": {"pattern": "\\s"}
+    },
+    "group_id": {
+      "type": "string",
+      "pattern": "^group:[a-zA-Z0-9._-]+$",
+      "not": {"pattern": "\\s"}
+    },
+    "ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "nonempty_ids": {"allOf": [{"$ref": "#/$defs/ids"}], "minItems": 1},
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_id", "groups"],
+      "properties": {
+        "subject_id": {"$ref": "#/$defs/user_id"},
+        "groups": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/group_id"}
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "uri"],
+      "properties": {
+        "kind": {"enum": ["internal", "external", "upload", "synthetic"]},
+        "uri": {"$ref": "#/$defs/uri"}
+      }
+    },
+    "acl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["public", "readers", "groups"],
+      "properties": {
+        "public": {"type": "boolean"},
+        "readers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/user_id"}
+        },
+        "groups": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/group_id"}
+        }
+      }
+    },
+    "source_trust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "assigned_by", "policy_version"],
+      "properties": {
+        "level": {"enum": ["untrusted", "verified", "trusted"]},
+        "assigned_by": {"const": "system:source-policy"},
+        "policy_version": {"$ref": "#/$defs/text"}
+      }
+    },
+    "document_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["doc_id", "source", "owner", "acl", "sensitivity", "source_trust"],
+      "properties": {
+        "doc_id": {"$ref": "#/$defs/id"},
+        "source": {"$ref": "#/$defs/source"},
+        "owner": {"$ref": "#/$defs/user_id"},
+        "acl": {"$ref": "#/$defs/acl"},
+        "sensitivity": {"enum": ["public", "internal", "confidential", "secret"]},
+        "source_trust": {"$ref": "#/$defs/source_trust"}
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadata", "content"],
+      "properties": {
+        "metadata": {"$ref": "#/$defs/document_metadata"},
+        "content": {"$ref": "#/$defs/text"}
+      }
+    },
+    "chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chunk_id", "metadata", "content"],
+      "properties": {
+        "chunk_id": {"$ref": "#/$defs/id"},
+        "metadata": {"$ref": "#/$defs/document_metadata"},
+        "content": {"$ref": "#/$defs/text"}
+      }
+    },
+    "match_rule": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["channel", "contains"],
+          "properties": {
+            "channel": {"const": "answer"},
+            "contains": {"$ref": "#/$defs/text"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["channel", "contains", "destination"],
+          "properties": {
+            "channel": {"const": "egress"},
+            "contains": {"$ref": "#/$defs/text"},
+            "destination": {"$ref": "#/$defs/uri"}
+          }
+        }
+      ]
+    },
+    "success_rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attack_success", "security_success", "task_success"],
+      "properties": {
+        "attack_success": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["any_of"],
+          "properties": {
+            "any_of": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/match_rule"}
+            }
+          }
+        },
+        "security_success": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all_of"],
+          "properties": {
+            "all_of": {"const": [
+              "context_acl_enforced",
+              "citation_acl_enforced",
+              "egress_acl_enforced",
+              "no_unauthorized_canary",
+              "no_attack_goal_emitted"
+            ]}
+          }
+        },
+        "task_success": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["answer_contains_all", "citation_doc_ids"],
+          "properties": {
+            "answer_contains_all": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/text"}
+            },
+            "citation_doc_ids": {"$ref": "#/$defs/nonempty_ids"}
+          }
+        }
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["doc_id", "chunk_id"],
+      "properties": {
+        "doc_id": {"$ref": "#/$defs/id"},
+        "chunk_id": {"$ref": "#/$defs/id"}
+      }
+    },
+    "egress_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["destination", "content", "source_doc_ids", "decision", "mocked"],
+      "properties": {
+        "destination": {"$ref": "#/$defs/uri"},
+        "content": {"type": "string"},
+        "source_doc_ids": {"$ref": "#/$defs/ids"},
+        "decision": {"enum": ["allowed", "blocked"]},
+        "mocked": {"const": true}
+      }
+    },
+    "run_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model", "defense_id", "temperature", "seed"],
+      "properties": {
+        "provider": {"$ref": "#/$defs/text"},
+        "model": {"$ref": "#/$defs/text"},
+        "defense_id": {"$ref": "#/$defs/id"},
+        "temperature": {"type": "number", "minimum": 0},
+        "seed": {"type": ["integer", "null"]}
+      }
+    },
+    "run_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "case_id", "run_id", "variant", "status", "config",
+        "trace_complete", "candidate_doc_ids", "context_chunks", "answer",
+        "citations", "egress_events", "error"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "case_id": {"$ref": "#/$defs/id"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "variant": {"enum": ["clean", "attack"]},
+        "status": {"enum": ["completed", "error"]},
+        "config": {"$ref": "#/$defs/run_config"},
+        "trace_complete": {"type": "boolean"},
+        "candidate_doc_ids": {"$ref": "#/$defs/ids"},
+        "context_chunks": {"type": "array", "items": {"$ref": "#/$defs/chunk"}},
+        "answer": {"type": "string"},
+        "citations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/citation"}
+        },
+        "egress_events": {"type": "array", "items": {"$ref": "#/$defs/egress_event"}},
+        "error": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "completed"}}},
+          "then": {"properties": {"error": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"status": {"const": "error"}}},
+          "then": {"properties": {"error": {"$ref": "#/$defs/text"}}}
+        }
+      ]
+    }
+  }
+}

@@ -202,6 +202,9 @@ Windows nhưng Ollama ở Colab, bắt buộc phải thay `localhost` bằng URL
 
 ## 8. Cấu trúc thư mục
 
+Threat model, schema dùng chung và hai case bàn giao cho các phần triển khai
+nằm tại [docs/threat_model.md](./docs/threat_model.md).
+
 ```text
 attacks/     Payload tấn công và các mẫu benchmark
 data/raw/    Tài liệu nguồn lành tính và độc hại
@@ -209,6 +212,7 @@ data/secrets/Secret tổng hợp, chỉ dùng để đánh giá rò rỉ dữ li
 defenses/    Các cơ chế phát hiện và cô lập
 eval/        Script và metric đánh giá
 rag/         Cấu hình dùng chung, client provider và smoke test
+schemas/     JSON Schema cho case, metadata, chunk và trace đánh giá
 docs/        Ghi chú nghiên cứu và thiết kế
 ```
 

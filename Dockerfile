@@ -20,4 +20,4 @@ USER app
 
 EXPOSE 8000
 
-CMD ["python", "--version"]s
+CMD ["python", "--version"]
