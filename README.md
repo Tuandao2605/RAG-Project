@@ -144,6 +144,7 @@ thư mục `tests/` và chạy các hàm có tên bắt đầu bằng `test_`. H
 | --- | --- |
 | `tests/test_config.py` | Kiểm tra provider và validation API key |
 | `tests/test_clients.py` | Kiểm tra xử lý response của Ollama/OpenAI-compatible API |
+| `tests/test_dataset.py` | Kiểm tra schema dữ liệu, split, canary và artifact attack sinh lại từ seed |
 
 Các test này dùng mock nên không cần Ollama, không cần API key và không gọi
 Internet. Có thể chạy riêng từng file:
@@ -203,11 +204,17 @@ Windows nhưng Ollama ở Colab, bắt buộc phải thay `localhost` bằng URL
 ## 8. Cấu trúc thư mục
 
 Threat model, schema dùng chung và hai case bàn giao cho các phần triển khai
-nằm tại [docs/threat_model.md](./docs/threat_model.md).
+nằm tại [docs/threat_model.md](./docs/threat_model.md). Đặc tả phương pháp cho
+prototype Sprint 3 ở [docs/method_spec.md](./docs/method_spec.md); bộ dữ liệu
+pilot và split ở [docs/dataset_datasheet.md](./docs/dataset_datasheet.md).
 
 ```text
 attacks/     Payload tấn công và các mẫu benchmark
+  cases/       Fixture SecurityCase (retrieval cố định) do A bàn giao
+  dev/         Bộ attack dev sinh từ seed (cases.jsonl, summary.json)
 data/raw/    Tài liệu nguồn lành tính và độc hại
+data/corpus/ Corpus pilot: docs.jsonl + manifest.json (split, giấy phép)
+data/qa/     Câu hỏi sạch có đáp án: dev.jsonl, test.jsonl
 data/secrets/Secret tổng hợp, chỉ dùng để đánh giá rò rỉ dữ liệu
 defenses/    Các cơ chế phát hiện và cô lập
 eval/        Script và metric đánh giá
@@ -235,3 +242,33 @@ container truy cập được. Với Ollama trên Docker Desktop, đặt
 ```powershell
 docker run --rm --env-file .env rag-security python -m rag.smoke_test
 ```
+
+## 10. Bộ dữ liệu pilot Sprint 2
+
+Bộ dữ liệu dùng cho pilot B0/B1 nằm trong repo và kiểm tra được offline, không
+cần model hay API key:
+
+| Thành phần | Tệp | Quy mô |
+| --- | --- | --- |
+| Corpus | [`data/corpus/docs.jsonl`](./data/corpus/docs.jsonl) + [`manifest.json`](./data/corpus/manifest.json) | 35 document (dev 27 / test 8) |
+| QA sạch | [`data/qa/dev.jsonl`](./data/qa/dev.jsonl), [`data/qa/test.jsonl`](./data/qa/test.jsonl) | 25 câu (dev 17 / test 8) |
+| Attack case dev | [`attacks/dev/cases.jsonl`](./attacks/dev/cases.jsonl) | 60 case, 5 nhóm × 12 |
+| Canary tổng hợp | [`data/secrets/canaries.json`](./data/secrets/canaries.json) | 3 giá trị giả |
+
+Hợp đồng dữ liệu ở [`schemas/rag_dataset.schema.json`](./schemas/rag_dataset.schema.json);
+provenance, split, taxonomy và hạn chế ở
+[`docs/dataset_datasheet.md`](./docs/dataset_datasheet.md).
+
+Sinh lại attack case và kiểm tra nhãn:
+
+```powershell
+python attacks/generate_dev_cases.py            # ghi lại artifact từ seed
+python attacks/generate_dev_cases.py --check    # artifact phải khớp seed
+python attacks/validate_dataset.py              # schema + ngữ nghĩa + bảng kiểm kê
+python -m pytest tests/test_dataset.py -q
+```
+
+`attacks/validate_dataset.py` trả mã 1 nếu corpus, QA hoặc attack case vi phạm
+hợp đồng: split rò rỉ, canary ngoài document `secret`, payload chứa canary,
+marker trùng với dữ liệu sạch, host document không thuộc split dev, hoặc nhóm
+tấn công thiếu case/vị trí chèn.

@@ -19,6 +19,9 @@ uvicorn
 # Đánh giá
 scikit-learn
 
+# Kiểm thử dữ liệu (JSON Schema)
+jsonschema>=4.18
+
 # Phát triển và kiểm thử
 pytest
 ruff

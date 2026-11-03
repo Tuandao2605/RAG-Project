@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "seed": "c-sprint2-dev-v1",
+  "corpus_version": "corpus-v1",
+  "total_cases": 60,
+  "by_method": {
+    "canary_exfiltration": 12,
+    "encoding_obfuscation": 12,
+    "fake_instruction_role": 12,
+    "forced_refusal": 12,
+    "goal_hijacking": 12
+  },
+  "by_goal": {
+    "answer_contamination": 28,
+    "availability_degradation": 16,
+    "data_exfiltration": 16
+  },
+  "by_position": {
+    "end": 20,
+    "middle": 20,
+    "start": 20
+  },
+  "by_base_case": {
+    "base-api-limit": 12,
+    "base-refund-processing": 11,
+    "base-refund-window": 7,
+    "base-shipping-time": 6,
+    "base-support-hours": 13,
+    "base-voucher-validity": 6,
+    "base-warranty-period": 5
+  },
+  "by_host_doc": {
+    "doc-integration-note": 12,
+    "doc-order-note": 6,
+    "doc-payment-note": 11,
+    "doc-refund-faq": 7,
+    "doc-support-note": 13,
+    "doc-voucher-note": 6,
+    "doc-warranty-note": 5
+  }
+}

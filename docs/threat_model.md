@@ -7,6 +7,8 @@ thủ mô tả dưới đây chưa được hiện thực trong repo.
 - Schema: [`schemas/security_case.schema.json`](../schemas/security_case.schema.json).
 - Case 1: [`indirect_answer_override.json`](../attacks/cases/indirect_answer_override.json).
 - Case 2: [`cross_acl_exfiltration.json`](../attacks/cases/cross_acl_exfiltration.json).
+- Bộ dữ liệu pilot Sprint 2: [`schemas/rag_dataset.schema.json`](../schemas/rag_dataset.schema.json)
+  và [`dataset_datasheet.md`](./dataset_datasheet.md).
 - Version hợp đồng: `1.0.0`; schema dùng JSON Schema Draft 2020-12.
 
 ## 1. Tài sản và mục tiêu bảo vệ

@@ -1,0 +1,286 @@
+{
+  "schema_version": "1.0.0",
+  "corpus_version": "corpus-v1",
+  "documents": [
+    {
+      "doc_id": "doc-refund-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án; trùng với document trong fixture indirect_answer_override.json.",
+      "source_note": "Mô phỏng trang chính sách nội bộ, không sao chép văn bản bên ngoài."
+    },
+    {
+      "doc_id": "doc-shipping-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng trang chính sách nội bộ."
+    },
+    {
+      "doc_id": "doc-warranty-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng trang chính sách nội bộ."
+    },
+    {
+      "doc_id": "doc-payment-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng trang chính sách nội bộ."
+    },
+    {
+      "doc_id": "doc-privacy-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng trang chính sách nội bộ."
+    },
+    {
+      "doc_id": "doc-return-fee-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng trang chính sách nội bộ."
+    },
+    {
+      "doc_id": "doc-voucher-policy",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng trang chính sách nội bộ."
+    },
+    {
+      "doc_id": "doc-support-hours",
+      "split": "dev",
+      "split_group": "g-policy",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án; trùng với document trong fixture cross_acl_exfiltration.json.",
+      "source_note": "Mô phỏng trang hướng dẫn nội bộ."
+    },
+    {
+      "doc_id": "doc-refund-faq",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn; bản sạch trước tấn công của document trong fixture indirect_answer_override.json.",
+      "source_note": "Mô phỏng bài đăng cộng đồng do người dùng bên ngoài kiểm soát."
+    },
+    {
+      "doc_id": "doc-support-note",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn; bản sạch trước tấn công của document trong fixture cross_acl_exfiltration.json.",
+      "source_note": "Mô phỏng ghi chú cộng đồng do người dùng bên ngoài kiểm soát."
+    },
+    {
+      "doc_id": "doc-order-note",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng trang do attacker kiểm soát trước khi bị chèn payload.",
+      "source_note": "Host mặc định cho nhóm tấn công về thời gian giao hàng."
+    },
+    {
+      "doc_id": "doc-warranty-note",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng trang do attacker kiểm soát trước khi bị chèn payload.",
+      "source_note": "Host mặc định cho nhóm tấn công về bảo hành."
+    },
+    {
+      "doc_id": "doc-payment-note",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng trang do attacker kiểm soát trước khi bị chèn payload.",
+      "source_note": "Host mặc định cho nhóm tấn công về thanh toán và hoàn tiền."
+    },
+    {
+      "doc_id": "doc-integration-note",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng trang do attacker kiểm soát trước khi bị chèn payload.",
+      "source_note": "Host mặc định cho nhóm tấn công về giới hạn API."
+    },
+    {
+      "doc_id": "doc-voucher-note",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng trang do attacker kiểm soát trước khi bị chèn payload.",
+      "source_note": "Host mặc định cho nhóm tấn công về voucher."
+    },
+    {
+      "doc_id": "doc-faq-order-tracking",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng bài viết cộng đồng có nội dung đúng nhưng không phải nguồn chính thức."
+    },
+    {
+      "doc_id": "doc-faq-warranty",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng bài viết cộng đồng."
+    },
+    {
+      "doc_id": "doc-faq-payment",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng bài viết cộng đồng."
+    },
+    {
+      "doc_id": "doc-faq-integration",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng bài viết cộng đồng về tích hợp API."
+    },
+    {
+      "doc_id": "doc-faq-voucher",
+      "split": "dev",
+      "split_group": "g-external-faq",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng bài viết cộng đồng."
+    },
+    {
+      "doc_id": "doc-tech-api-rate-limit",
+      "split": "dev",
+      "split_group": "g-tech-docs",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng tài liệu tích hợp nội bộ."
+    },
+    {
+      "doc_id": "doc-tech-webhook",
+      "split": "dev",
+      "split_group": "g-tech-docs",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng tài liệu tích hợp nội bộ."
+    },
+    {
+      "doc_id": "doc-tech-log-retention",
+      "split": "dev",
+      "split_group": "g-tech-docs",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng tài liệu vận hành nội bộ."
+    },
+    {
+      "doc_id": "doc-tech-sso",
+      "split": "dev",
+      "split_group": "g-tech-docs",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn cho đồ án.",
+      "source_note": "Mô phỏng tài liệu vận hành nội bộ."
+    },
+    {
+      "doc_id": "doc-ops-secret",
+      "split": "dev",
+      "split_group": "g-ops-secret",
+      "license": "project-original",
+      "provenance": "Dữ liệu tổng hợp; canary giả, không phải credential thật. Trùng với document trong fixture cross_acl_exfiltration.json.",
+      "source_note": "Chỉ dùng làm đích kiểm tra rò rỉ và phân quyền."
+    },
+    {
+      "doc_id": "doc-ops-billing-runbook",
+      "split": "dev",
+      "split_group": "g-ops-secret",
+      "license": "project-original",
+      "provenance": "Dữ liệu tổng hợp; canary giả, không phải credential thật.",
+      "source_note": "Chỉ dùng làm đích kiểm tra rò rỉ và phân quyền."
+    },
+    {
+      "doc_id": "doc-ops-key-rotation",
+      "split": "dev",
+      "split_group": "g-ops-secret",
+      "license": "project-original",
+      "provenance": "Dữ liệu tổng hợp; canary giả, không phải credential thật.",
+      "source_note": "Chỉ dùng làm đích kiểm tra rò rỉ và phân quyền."
+    },
+    {
+      "doc_id": "doc-wiki-rag-overview",
+      "split": "test",
+      "split_group": "g-wiki",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, tóm tắt khái niệm phổ biến bằng lời của nhóm.",
+      "source_note": "Mô phỏng bài viết bách khoa; không sao chép văn bản nguồn."
+    },
+    {
+      "doc_id": "doc-wiki-prompt-injection",
+      "split": "test",
+      "split_group": "g-wiki",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, tóm tắt khái niệm phổ biến bằng lời của nhóm.",
+      "source_note": "Mô phỏng bài viết bách khoa; không sao chép văn bản nguồn."
+    },
+    {
+      "doc_id": "doc-wiki-vector-search",
+      "split": "test",
+      "split_group": "g-wiki",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, tóm tắt khái niệm phổ biến bằng lời của nhóm.",
+      "source_note": "Mô phỏng bài viết bách khoa; không sao chép văn bản nguồn."
+    },
+    {
+      "doc_id": "doc-wiki-chunking",
+      "split": "test",
+      "split_group": "g-wiki",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, tóm tắt khái niệm phổ biến bằng lời của nhóm.",
+      "source_note": "Mô phỏng bài viết bách khoa; không sao chép văn bản nguồn."
+    },
+    {
+      "doc_id": "doc-upload-meeting-notes",
+      "split": "test",
+      "split_group": "g-upload",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng file người dùng tải lên.",
+      "source_note": "Không chứa dữ liệu thật của nhóm hay cá nhân."
+    },
+    {
+      "doc_id": "doc-upload-onboarding",
+      "split": "test",
+      "split_group": "g-upload",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng file người dùng tải lên.",
+      "source_note": "Không chứa dữ liệu thật của nhóm hay cá nhân."
+    },
+    {
+      "doc_id": "doc-upload-q3-report",
+      "split": "test",
+      "split_group": "g-upload",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, số liệu hư cấu.",
+      "source_note": "Không chứa dữ liệu thật của nhóm hay cá nhân."
+    },
+    {
+      "doc_id": "doc-upload-trial-policy",
+      "split": "test",
+      "split_group": "g-upload",
+      "license": "project-original",
+      "provenance": "Nội dung do nhóm tự soạn, mô phỏng file người dùng tải lên.",
+      "source_note": "Không chứa dữ liệu thật của nhóm hay cá nhân."
+    }
+  ]
+}
