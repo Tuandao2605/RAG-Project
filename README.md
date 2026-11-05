@@ -146,13 +146,19 @@ thư mục `tests/` và chạy các hàm có tên bắt đầu bằng `test_`. H
 | `tests/test_clients.py` | Kiểm tra xử lý response của Ollama/OpenAI-compatible API |
 | `tests/test_dataset.py` | Kiểm tra schema dữ liệu, split, canary và artifact attack sinh lại từ seed |
 | `tests/test_eval_runner.py` | Kiểm tra rule ASR, clean pair, invalid/service error, utility và latency |
+| `tests/test_ingest.py` | Kiểm tra đọc Markdown/JSONL và chia chunk |
+| `tests/test_index.py` | Kiểm tra FAISS, metadata, lưu/nạp, query và index rỗng |
 
-Các test này dùng mock nên không cần Ollama, không cần API key và không gọi
-Internet. Có thể chạy riêng từng file:
+Các unit test dùng mock nên không cần Ollama, không cần API key và không gọi
+Internet. Có thể chạy riêng từng nhóm:
 
 ```powershell
 python -m pytest tests/test_config.py
 python -m pytest tests/test_clients.py
+python -m pytest tests/test_ingest.py
+python -m pytest tests/test_index.py
+python -m pytest tests/test_dataset.py
+python -m pytest tests/test_eval_runner.py
 ```
 
 Smoke test được tách riêng vì cần model service đang chạy và có thể phải tải
@@ -210,19 +216,56 @@ prototype Sprint 3 ở [docs/method_spec.md](./docs/method_spec.md); bộ dữ l
 pilot và split ở [docs/dataset_datasheet.md](./docs/dataset_datasheet.md).
 
 ```text
-attacks/     Payload tấn công và các mẫu benchmark
-  cases/       Fixture SecurityCase (retrieval cố định) do A bàn giao
-  dev/         Bộ attack dev sinh từ seed (cases.jsonl, summary.json)
-data/raw/    Tài liệu nguồn lành tính và độc hại
-data/corpus/ Corpus pilot: docs.jsonl + manifest.json (split, giấy phép)
-data/qa/     Câu hỏi sạch có đáp án: dev.jsonl, test.jsonl
-data/secrets/Secret tổng hợp, chỉ dùng để đánh giá rò rỉ dữ liệu
-defenses/    Các cơ chế phát hiện và cô lập
-eval/        Script và metric đánh giá
-rag/         Cấu hình dùng chung, client provider và smoke test
-schemas/     JSON Schema cho case, metadata, chunk và trace đánh giá
-docs/        Ghi chú nghiên cứu và thiết kế
+rag-security/
+├── attacks/
+│   ├── cases/           Fixture SecurityCase cho benchmark
+│   ├── dev/             Attack cases sinh từ seed
+│   └── generate_dev_cases.py
+├── data/
+│   ├── raw/             Tài liệu Markdown/JSONL đầu vào
+│   ├── corpus/          Corpus pilot và manifest
+│   ├── qa/              Câu hỏi sạch có đáp án
+│   └── secrets/         Canary tổng hợp dùng đánh giá rò rỉ
+├── defenses/            Cơ chế phát hiện và cô lập
+├── eval/                Script và metric đánh giá
+├── schemas/             JSON Schema cho dataset và trace
+├── rag/
+│   ├── __init__.py
+│   ├── clients.py       Client LLM và embedding
+│   ├── config.py        Đọc cấu hình từ biến môi trường
+│   ├── ingest.py        Đọc tài liệu và chia chunk
+│   ├── index.py         FAISS, metadata và truy xuất top-k
+│   ├── cli.py           Lệnh build-index và query
+│   └── smoke_test.py    Kiểm tra kết nối LLM/embedding thật
+├── tests/
+│   ├── test_config.py   Test validation cấu hình
+│   ├── test_clients.py  Test client LLM bằng mock
+│   ├── test_dataset.py  Test schema và artifact dataset
+│   ├── test_eval_runner.py
+│   ├── test_ingest.py   Test đọc tài liệu và chunk
+│   └── test_index.py    Test FAISS và truy xuất
+├── docs/
+│   ├── README.md        Hướng dẫn Docker bổ sung
+│   ├── threat_model.md  Threat model
+│   ├── method_spec.md   Đặc tả phương pháp
+│   └── dataset_datasheet.md
+├── requirements.txt
+├── pyproject.toml
+├── .env.example
+└── README.md
 ```
+
+Thư mục kết quả index được tạo khi sử dụng:
+
+```text
+data/raw/          Tài liệu Markdown/JSONL đầu vào
+artifacts/index/   index.faiss và metadata.json sau khi build
+```
+
+`tests/` nên được giữ trong cấu trúc dự án và không đưa vào `data/raw/`.
+Các file trong `tests/` là mã kiểm thử tự động, còn `data/raw/` chỉ chứa tài
+liệu được ingest. Các thư mục `attacks/`, `defenses/`, `eval/`, `schemas/` và
+dữ liệu pilot là thành phần benchmark của đồ án.
 
 ## 9. Chạy bằng Docker
 
@@ -289,3 +332,91 @@ python -m eval.runner `
   --latencies artifacts/latencies.jsonl `
   --output artifacts/evaluation.json
 ```
+
+## 12. Ingest tài liệu và truy xuất FAISS
+
+Pipeline RAG hiện có hỗ trợ:
+
+```text
+Markdown/JSONL -> chuẩn hóa -> chia chunk -> passage embedding -> FAISS
+```
+
+Mỗi chunk được lưu metadata gồm `chunk_id`, `doc_id` và `text`. Khi truy vấn,
+hệ thống dùng tiền tố `query:` cho câu hỏi, sau đó trả về top-k kết quả cùng
+`chunk_id`, `doc_id`, `score` và nội dung chunk.
+
+### Chuẩn bị dữ liệu
+
+Tạo thư mục dữ liệu, ví dụ:
+
+```text
+data/raw/
+├── security_policy.md
+└── policies.jsonl
+```
+
+Markdown dùng toàn bộ nội dung file. JSONL dùng một object mỗi dòng, bắt buộc
+có `text` (hoặc `content`) và có thể có `doc_id`:
+
+```json
+{"doc_id":"policy-001","text":"Mật khẩu phải có ít nhất 12 ký tự."}
+```
+
+Nếu Markdown không có `doc_id`, tên file được dùng làm `doc_id`.
+
+### Build index
+
+Kích hoạt virtual environment rồi chạy:
+
+```powershell
+python -m rag.cli build-index `
+  --input data/raw `
+  --output artifacts/index `
+  --chunk-size 800 `
+  --overlap 100
+```
+
+Kết quả tạo:
+
+```text
+artifacts/index/index.faiss
+artifacts/index/metadata.json
+```
+
+Tham số `--overlap` giúp giữ lại một phần ngữ cảnh giữa hai chunk. Khi thư
+mục đầu vào rỗng, index vẫn được lưu hợp lệ và truy vấn sẽ trả về `[]`.
+
+### Query top-k
+
+```powershell
+python -m rag.cli query `
+  --index artifacts/index `
+  --query "Chính sách mật khẩu là gì?" `
+  --top-k 3
+```
+
+Ví dụ kết quả:
+
+```json
+[
+  {
+    "chunk_id": "policy-001:0000",
+    "doc_id": "policy-001",
+    "text": "Mật khẩu phải có ít nhất 12 ký tự.",
+    "score": 0.8731
+  }
+]
+```
+
+### Kiểm thử pipeline
+
+Các test ingest và FAISS dùng embedding mock nên không cần tải model
+Hugging Face:
+
+```powershell
+python -m pytest tests/test_ingest.py tests/test_index.py -v
+python -m pytest -v
+```
+
+Các test bao gồm đọc Markdown/JSONL, tạo chunk, lưu/nạp index, truy xuất câu
+hỏi sạch và truy vấn index rỗng.

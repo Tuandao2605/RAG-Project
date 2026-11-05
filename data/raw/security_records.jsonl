@@ -1,0 +1,3 @@
+{"doc_id":"incident-response-001","text":"Mọi sự cố bảo mật phải được báo cáo cho nhóm phụ trách trong vòng 24 giờ."}
+{"doc_id":"backup-policy-001","text":"Bản sao lưu dữ liệu quan trọng phải được mã hóa và kiểm tra khả năng khôi phục định kỳ."}
+{"doc_id":"access-control-001","text":"Quyền truy cập phải được cấp theo nguyên tắc đặc quyền tối thiểu và rà soát hàng quý."}

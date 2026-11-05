@@ -75,8 +75,8 @@ def chat(prompt: str, config: Settings) -> str:
     return message["content"]
 
 
-def embed(texts: list[str], config: Settings) -> list[list[float]]:
-    """Tạo embedding E5 đa ngôn ngữ local cho danh sách văn bản."""
+def _embed(texts: list[str], prefix: str, config: Settings) -> list[list[float]]:
+    """Tạo embedding E5 cho danh sách văn bản với tiền tố phù hợp."""
     if not texts:
         raise ValueError("At least one text is required for embedding.")
     try:
@@ -87,6 +87,16 @@ def embed(texts: list[str], config: Settings) -> list[list[float]]:
         ) from exc
 
     model = SentenceTransformer(config.embedding_model, device=config.embedding_device)
-    prefixed_texts = [f"passage: {text}" for text in texts]
+    prefixed_texts = [f"{prefix}: {text}" for text in texts]
     vectors = model.encode(prefixed_texts, normalize_embeddings=True)
     return vectors.tolist()
+
+
+def embed(texts: list[str], config: Settings) -> list[list[float]]:
+    """Tạo embedding passage cho danh sách văn bản tài liệu."""
+    return _embed(texts, "passage", config)
+
+
+def embed_queries(texts: list[str], config: Settings) -> list[list[float]]:
+    """Tạo embedding query cho danh sách câu hỏi."""
+    return _embed(texts, "query", config)
