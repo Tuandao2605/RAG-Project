@@ -145,6 +145,7 @@ thư mục `tests/` và chạy các hàm có tên bắt đầu bằng `test_`. H
 | `tests/test_config.py` | Kiểm tra provider và validation API key |
 | `tests/test_clients.py` | Kiểm tra xử lý response của Ollama/OpenAI-compatible API |
 | `tests/test_dataset.py` | Kiểm tra schema dữ liệu, split, canary và artifact attack sinh lại từ seed |
+| `tests/test_eval_runner.py` | Kiểm tra rule ASR, clean pair, invalid/service error, utility và latency |
 
 Các test này dùng mock nên không cần Ollama, không cần API key và không gọi
 Internet. Có thể chạy riêng từng file:
@@ -272,3 +273,19 @@ python -m pytest tests/test_dataset.py -q
 hợp đồng: split rò rỉ, canary ngoài document `secret`, payload chứa canary,
 marker trùng với dữ liệu sạch, host document không thuộc split dev, hoặc nhóm
 tấn công thiếu case/vị trí chèn.
+
+## 11. Chấm trace và tổng hợp pilot
+
+Runner ticket 2.6 chấm JSONL trace theo schema chung, tính ASR theo
+[`docs/method_spec.md`](./docs/method_spec.md), task success, security asserts,
+utility QA và latency. Cách tạo artifact và phân loại `invalid` / `service_error`
+nằm trong [`docs/evaluation_runner.md`](./docs/evaluation_runner.md).
+
+```powershell
+python -m eval.runner `
+  --cases attacks/cases `
+  --runs artifacts/runs.jsonl `
+  --qa data/qa/dev.jsonl `
+  --latencies artifacts/latencies.jsonl `
+  --output artifacts/evaluation.json
+```
