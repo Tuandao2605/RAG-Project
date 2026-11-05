@@ -6,6 +6,8 @@ import argparse
 import json
 import sys
 
+from defenses.sandwich import DEFENSE_IDS, build_prompt
+from rag.clients import chat
 from rag.config import settings
 from rag.index import build_index, load_index, save_index, search
 from rag.ingest import load_chunks
@@ -25,6 +27,14 @@ def _parser() -> argparse.ArgumentParser:
     query.add_argument("--index", required=True, help="Directory containing index artifacts.")
     query.add_argument("--query", required=True, help="Question to retrieve against.")
     query.add_argument("--top-k", type=int, default=5)
+
+    answer = commands.add_parser("answer", help="Retrieve context and answer using B0 or B1.")
+    answer.add_argument("--index", required=True, help="Directory containing index artifacts.")
+    answer.add_argument("--question", required=True, help="Question to answer.")
+    answer.add_argument("--top-k", type=int, default=5)
+    answer.add_argument("--defense", choices=DEFENSE_IDS, default="b0")
+    answer.add_argument("--temperature", type=float, default=0.0)
+    answer.add_argument("--seed", type=int, default=42)
     return parser
 
 
@@ -42,9 +52,25 @@ def main(argv: list[str] | None = None) -> int:
         data = load_index(args.index)
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
-        print(
-            json.dumps(search(data, args.query, args.top_k, settings), ensure_ascii=False, indent=2)
-        )
+        if args.command == "query":
+            result = search(data, args.query, args.top_k, settings)
+        else:
+            retrieved = search(data, args.question, args.top_k, settings)
+            prompt = build_prompt(args.question, retrieved, defense_id=args.defense)
+            answer_text = chat(
+                prompt,
+                settings,
+                temperature=args.temperature,
+                seed=args.seed,
+            )
+            result = {
+                "defense_id": args.defense,
+                "answer": answer_text,
+                "sources": retrieved,
+                "temperature": args.temperature,
+                "seed": args.seed,
+            }
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (OSError, ValueError, RuntimeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

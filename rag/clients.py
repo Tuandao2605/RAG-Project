@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -37,16 +38,29 @@ def _post_json(
     return result
 
 
-def chat(prompt: str, config: Settings) -> str:
+def chat(
+    prompt: str,
+    config: Settings,
+    temperature: float = 0.0,
+    seed: int | None = None,
+) -> str:
     """Gửi một yêu cầu chat không streaming tới LLM provider đã chọn."""
     config.validate()
+    if not math.isfinite(temperature) or temperature < 0:
+        raise ValueError("temperature must be a finite non-negative number")
+    if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+        raise ValueError("seed must be an integer or None")
     if config.llm_provider == "ollama":
+        options: dict[str, object] = {"temperature": temperature}
+        if seed is not None:
+            options["seed"] = seed
         response = _post_json(
             f"{config.ollama_base_url}/api/chat",
             {
                 "model": config.ollama_llm_model,
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
+                "options": options,
             },
         )
         message = response.get("message")
@@ -54,13 +68,16 @@ def chat(prompt: str, config: Settings) -> str:
             raise ProviderError("Ollama response did not contain message.content.")
         return message["content"]
 
+    payload: dict[str, object] = {
+        "model": config.openai_llm_model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+    }
+    if seed is not None:
+        payload["seed"] = seed
     response = _post_json(
         f"{config.openai_base_url}/chat/completions",
-        {
-            "model": config.openai_llm_model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0,
-        },
+        payload,
         {"Authorization": f"Bearer {config.openai_api_key}"},
     )
     choices = response.get("choices")

@@ -146,6 +146,7 @@ thư mục `tests/` và chạy các hàm có tên bắt đầu bằng `test_`. H
 | `tests/test_clients.py` | Kiểm tra xử lý response của Ollama/OpenAI-compatible API |
 | `tests/test_dataset.py` | Kiểm tra schema dữ liệu, split, canary và artifact attack sinh lại từ seed |
 | `tests/test_eval_runner.py` | Kiểm tra rule ASR, clean pair, invalid/service error, utility và latency |
+| `tests/test_sandwich.py` | Kiểm tra B0/B1 prompt, 5 nhóm attack và hook CLI |
 | `tests/test_ingest.py` | Kiểm tra đọc Markdown/JSONL và chia chunk |
 | `tests/test_index.py` | Kiểm tra FAISS, metadata, lưu/nạp, query và index rỗng |
 
@@ -159,6 +160,7 @@ python -m pytest tests/test_ingest.py
 python -m pytest tests/test_index.py
 python -m pytest tests/test_dataset.py
 python -m pytest tests/test_eval_runner.py
+python -m pytest tests/test_sandwich.py
 ```
 
 Smoke test được tách riêng vì cần model service đang chạy và có thể phải tải
@@ -226,7 +228,8 @@ rag-security/
 │   ├── corpus/          Corpus pilot và manifest
 │   ├── qa/              Câu hỏi sạch có đáp án
 │   └── secrets/         Canary tổng hợp dùng đánh giá rò rỉ
-├── defenses/            Cơ chế phát hiện và cô lập
+├── defenses/
+│   └── sandwich.py      Prompt hook B0/B1
 ├── eval/                Script và metric đánh giá
 ├── schemas/             JSON Schema cho dataset và trace
 ├── rag/
@@ -235,20 +238,22 @@ rag-security/
 │   ├── config.py        Đọc cấu hình từ biến môi trường
 │   ├── ingest.py        Đọc tài liệu và chia chunk
 │   ├── index.py         FAISS, metadata và truy xuất top-k
-│   ├── cli.py           Lệnh build-index và query
+│   ├── cli.py           Lệnh build-index, query và answer B0/B1
 │   └── smoke_test.py    Kiểm tra kết nối LLM/embedding thật
 ├── tests/
 │   ├── test_config.py   Test validation cấu hình
 │   ├── test_clients.py  Test client LLM bằng mock
 │   ├── test_dataset.py  Test schema và artifact dataset
 │   ├── test_eval_runner.py
+│   ├── test_sandwich.py
 │   ├── test_ingest.py   Test đọc tài liệu và chunk
 │   └── test_index.py    Test FAISS và truy xuất
 ├── docs/
 │   ├── README.md        Hướng dẫn Docker bổ sung
 │   ├── threat_model.md  Threat model
 │   ├── method_spec.md   Đặc tả phương pháp
-│   └── dataset_datasheet.md
+│   ├── dataset_datasheet.md
+│   └── sandwich_prompting.md
 ├── requirements.txt
 ├── pyproject.toml
 ├── .env.example
@@ -407,6 +412,27 @@ Ví dụ kết quả:
   }
 ]
 ```
+
+### Sinh câu trả lời với B0 hoặc B1
+
+Lệnh `answer` truy xuất top-k một lần rồi gửi cùng chunk/context đến cùng LLM.
+Chỉ prompt thay đổi giữa B0 và B1. B1 Sandwich Prompting đặt chỉ dẫn về cách
+dùng context trước và sau phần tài liệu truy xuất. Thiết lập mặc định là
+temperature `0` và seed `42`; hãy giữ nguyên các tham số khi so sánh hai defense.
+
+```powershell
+python -m rag.cli answer `
+  --index artifacts/index `
+  --question "Chính sách mật khẩu là gì?" `
+  --top-k 3 `
+  --defense b1 `
+  --temperature 0 `
+  --seed 42
+```
+
+Dùng `--defense b0` để chạy baseline. Cả hai chế độ trả về câu trả lời cùng
+danh sách chunk nguồn đã truy xuất. Chi tiết prompt và protocol ở
+[`docs/sandwich_prompting.md`](./docs/sandwich_prompting.md).
 
 ### Kiểm thử pipeline
 
