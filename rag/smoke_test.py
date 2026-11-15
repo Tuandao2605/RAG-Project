@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import sys
 
-from rag.clients import ProviderError, chat, embed
 from rag.config import settings
+from rag.embedding import embed
+from rag.llm_client import ProviderError, chat
 
 
 def main() -> int:

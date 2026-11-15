@@ -1,4 +1,4 @@
-"""Xây dựng, lưu, nạp và truy vấn chỉ mục FAISS."""
+"""Xây dựng, lưu, nạp và truy vấn chỉ mục vector FAISS."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from typing import Any
 import faiss
 import numpy as np
 
-from rag.clients import embed, embed_queries
 from rag.config import Settings
+from rag.embedding import embed, embed_queries
 from rag.ingest import Chunk
 
 

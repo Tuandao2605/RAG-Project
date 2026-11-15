@@ -4,7 +4,7 @@ Mã nguồn phục vụ đồ án nghiên cứu cơ chế phát hiện và phòn
 injection gián tiếp** và **rò rỉ dữ liệu** trong các hệ thống
 Retrieval-Augmented Generation (RAG).
 
-## 1. Stack công nghệ được chốt
+## 1. Stack công nghệ được sử dụng
 
 Cấu hình mặc định ưu tiên chạy local để thí nghiệm có thể tái lập và không
 bắt buộc phải có API key:
@@ -128,6 +128,11 @@ Toàn bộ cấu hình được đọc từ biến môi trường. File mẫu đ
 | `RAG_OPENAI_LLM_MODEL` | `gpt-4o-mini` | Model dùng qua API |
 | `RAG_EMBEDDING_MODEL` | `intfloat/multilingual-e5-small` | Model embedding trên Hugging Face |
 | `RAG_EMBEDDING_DEVICE` | `cpu` | Có thể chọn `cpu`, `cuda` hoặc Torch device khác |
+| `RAG_CHUNK_SIZE` | `800` | Kích thước chunk theo ký tự |
+| `RAG_CHUNK_OVERLAP` | `100` | Số ký tự overlap giữa các chunk |
+| `RAG_TOP_K` | `5` | Số context truy xuất mặc định |
+| `RAG_PROMPT_TEMPLATE` | `grounded` | Template prompt yêu cầu trả lời có nguồn |
+| `RAG_SEED` | `7` | Seed gửi cho provider nếu provider hỗ trợ |
 
 ## 7. Kiểm tra trong quá trình phát triển
 
@@ -143,21 +148,24 @@ thư mục `tests/` và chạy các hàm có tên bắt đầu bằng `test_`. H
 | File | Nội dung kiểm tra |
 | --- | --- |
 | `tests/test_config.py` | Kiểm tra provider và validation API key |
-| `tests/test_clients.py` | Kiểm tra xử lý response của Ollama/OpenAI-compatible API |
+| `tests/test_llm_client.py` | Kiểm tra xử lý response của Ollama/OpenAI-compatible API |
 | `tests/test_dataset.py` | Kiểm tra schema dữ liệu, split, canary và artifact attack sinh lại từ seed |
 | `tests/test_eval_runner.py` | Kiểm tra rule ASR, clean pair, invalid/service error, utility và latency |
 | `tests/test_sandwich.py` | Kiểm tra B0/B1 prompt, 5 nhóm attack và hook CLI |
 | `tests/test_ingest.py` | Kiểm tra đọc Markdown/JSONL và chia chunk |
-| `tests/test_index.py` | Kiểm tra FAISS, metadata, lưu/nạp, query và index rỗng |
+| `tests/test_vector_index.py` | Kiểm tra FAISS, metadata, lưu/nạp, query và index rỗng |
+| `tests/test_pipeline.py` | Kiểm tra pipeline B0, trace, lỗi và latency |
+| `tests/test_prompting.py` | Kiểm tra prompt grounded và nguồn context |
 
 Các unit test dùng mock nên không cần Ollama, không cần API key và không gọi
 Internet. Có thể chạy riêng từng nhóm:
 
 ```powershell
 python -m pytest tests/test_config.py
-python -m pytest tests/test_clients.py
+python -m pytest tests/test_llm_client.py
 python -m pytest tests/test_ingest.py
-python -m pytest tests/test_index.py
+python -m pytest tests/test_vector_index.py
+python -m pytest tests/test_pipeline.py tests/test_prompting.py
 python -m pytest tests/test_dataset.py
 python -m pytest tests/test_eval_runner.py
 python -m pytest tests/test_sandwich.py
@@ -234,20 +242,26 @@ rag-security/
 ├── schemas/             JSON Schema cho dataset và trace
 ├── rag/
 │   ├── __init__.py
-│   ├── clients.py       Client LLM và embedding
+│   ├── llm_client.py    Client Ollama/OpenAI-compatible
+│   ├── embedding.py     Tạo embedding passage và query
 │   ├── config.py        Đọc cấu hình từ biến môi trường
 │   ├── ingest.py        Đọc tài liệu và chia chunk
-│   ├── index.py         FAISS, metadata và truy xuất top-k
-│   ├── cli.py           Lệnh build-index, query và answer B0/B1
+│   ├── vector_index.py  FAISS, metadata và truy xuất top-k
+│   ├── defenses.py      Hook defense dùng chung cho B0/B1
+│   ├── prompting.py     Prompt grounded có nguồn
+│   ├── pipeline.py      Pipeline retrieval-defense-LLM và trace
+│   ├── cli.py           Lệnh build-index, query và answer
 │   └── smoke_test.py    Kiểm tra kết nối LLM/embedding thật
 ├── tests/
 │   ├── test_config.py   Test validation cấu hình
-│   ├── test_clients.py  Test client LLM bằng mock
+│   ├── test_llm_client.py
 │   ├── test_dataset.py  Test schema và artifact dataset
 │   ├── test_eval_runner.py
 │   ├── test_sandwich.py
 │   ├── test_ingest.py   Test đọc tài liệu và chunk
-│   └── test_index.py    Test FAISS và truy xuất
+│   ├── test_vector_index.py
+│   ├── test_prompting.py Test prompt grounded
+│   └── test_pipeline.py Test B0, trace và lỗi
 ├── docs/
 │   ├── README.md        Hướng dẫn Docker bổ sung
 │   ├── threat_model.md  Threat model
@@ -263,8 +277,8 @@ rag-security/
 Thư mục kết quả index được tạo khi sử dụng:
 
 ```text
-data/raw/          Tài liệu Markdown/JSONL đầu vào
-artifacts/index/   index.faiss và metadata.json sau khi build
+data/raw/              Tài liệu Markdown/JSONL đầu vào
+artifacts/demo-index/  index.faiss và metadata.json sau khi build
 ```
 
 `tests/` nên được giữ trong cấu trúc dự án và không đưa vào `data/raw/`.
@@ -329,6 +343,9 @@ Runner ticket 2.6 chấm JSONL trace theo schema chung, tính ASR theo
 utility QA và latency. Cách tạo artifact và phân loại `invalid` / `service_error`
 nằm trong [`docs/evaluation_runner.md`](./docs/evaluation_runner.md).
 
+Lệnh này chỉ chạy sau khi đã có trace JSONL ở `artifacts/runs.jsonl` và,
+nếu dùng latency, sidecar ở `artifacts/latencies.jsonl`:
+
 ```powershell
 python -m eval.runner `
   --cases attacks/cases `
@@ -374,9 +391,12 @@ Nếu Markdown không có `doc_id`, tên file được dùng làm `doc_id`.
 Kích hoạt virtual environment rồi chạy:
 
 ```powershell
+Set-Location C:\Users\tuduy\Documents\DATN\rag-security
+.\.venv\Scripts\Activate.ps1
+
 python -m rag.cli build-index `
-  --input data/raw `
-  --output artifacts/index `
+  --input data\raw `
+  --output artifacts\demo-index `
   --chunk-size 800 `
   --overlap 100
 ```
@@ -384,8 +404,15 @@ python -m rag.cli build-index `
 Kết quả tạo:
 
 ```text
-artifacts/index/index.faiss
-artifacts/index/metadata.json
+artifacts/demo-index/index.faiss
+artifacts/demo-index/metadata.json
+```
+
+Lần chạy đầu có thể tải model embedding `intfloat/multilingual-e5-small` từ
+Hugging Face. Nếu gặp lỗi thiếu package, cài dependency bằng:
+
+```powershell
+python -m pip install -r requirements.txt
 ```
 
 Tham số `--overlap` giúp giữ lại một phần ngữ cảnh giữa hai chunk. Khi thư
@@ -395,7 +422,7 @@ mục đầu vào rỗng, index vẫn được lưu hợp lệ và truy vấn s�
 
 ```powershell
 python -m rag.cli query `
-  --index artifacts/index `
+  --index artifacts\demo-index `
   --query "Chính sách mật khẩu là gì?" `
   --top-k 3
 ```
@@ -433,6 +460,31 @@ python -m rag.cli answer `
 Dùng `--defense b0` để chạy baseline. Cả hai chế độ trả về câu trả lời cùng
 danh sách chunk nguồn đã truy xuất. Chi tiết prompt và protocol ở
 [`docs/sandwich_prompting.md`](./docs/sandwich_prompting.md).
+### B0: chạy từ câu hỏi tới câu trả lời có nguồn
+
+Lệnh `answer` dùng cùng pipeline cho B0 và các phiên bản defense sau này:
+
+```text
+query -> retrieval -> context_before_defense -> defense hook
+      -> context_after_defense -> grounded prompt -> LLM -> answer + citations
+```
+
+Chạy B0 với hook `noop` (không lọc context):
+
+```powershell
+python -m rag.cli answer `
+  --index artifacts\demo-index `
+  --query "Chính sách mật khẩu là gì?" `
+  --top-k 3 `
+  --defense noop `
+  --seed 7 `
+  --log artifacts/b0-runs.jsonl
+```
+
+Kết quả JSON gồm `answer`, `citations`, context trước/sau defense, cấu hình,
+latency retrieval/defense/LLM/tổng và lỗi nếu có. Mỗi lần chạy được ghi thêm
+một dòng JSONL vào file `--log`. B0 và B1 dùng chung pipeline; B1 chỉ thay
+implementation của defense hook.
 
 ### Kiểm thử pipeline
 
@@ -440,9 +492,10 @@ Các test ingest và FAISS dùng embedding mock nên không cần tải model
 Hugging Face:
 
 ```powershell
-python -m pytest tests/test_ingest.py tests/test_index.py -v
+python -m pytest tests/test_ingest.py tests/test_vector_index.py -v
 python -m pytest -v
 ```
 
 Các test bao gồm đọc Markdown/JSONL, tạo chunk, lưu/nạp index, truy xuất câu
-hỏi sạch và truy vấn index rỗng.
+hỏi sạch và truy vấn index rỗng. Test pipeline mock retrieval/LLM nên không
+cần chạy Ollama hoặc tải model.

@@ -1,13 +1,13 @@
 from unittest.mock import patch
 
-from rag.clients import chat
 from rag.config import Settings
+from rag.llm_client import chat
 
 
 def test_ollama_chat_returns_message_content() -> None:
     config = Settings(llm_provider="ollama")
     with patch(
-        "rag.clients._post_json",
+        "rag.llm_client._post_json",
         return_value={"message": {"content": "safe response"}},
     ) as post:
         result = chat("hello", config, temperature=0.25, seed=7)
@@ -25,7 +25,7 @@ def test_openai_compatible_chat_sends_authorization() -> None:
         openai_base_url="http://localhost:8000/v1",
     )
     with patch(
-        "rag.clients._post_json",
+        "rag.llm_client._post_json",
         return_value={"choices": [{"message": {"content": "safe response"}}]},
     ) as post:
         result = chat("hello", config, temperature=0.25, seed=7)

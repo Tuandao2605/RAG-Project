@@ -15,6 +15,14 @@ def _env(name: str, default: str) -> str:
     return value.strip() if value else default
 
 
+def _env_int(name: str, default: int) -> int:
+    value = _env(name, str(default))
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer, got {value!r}.") from exc
+
+
 @dataclass(frozen=True)
 class Settings:
     llm_provider: str = _env("RAG_LLM_PROVIDER", "ollama").lower()
@@ -25,6 +33,11 @@ class Settings:
     openai_llm_model: str = _env("RAG_OPENAI_LLM_MODEL", "gpt-4o-mini")
     embedding_model: str = _env("RAG_EMBEDDING_MODEL", "intfloat/multilingual-e5-small")
     embedding_device: str = _env("RAG_EMBEDDING_DEVICE", "cpu")
+    chunk_size: int = _env_int("RAG_CHUNK_SIZE", 800)
+    chunk_overlap: int = _env_int("RAG_CHUNK_OVERLAP", 100)
+    top_k: int = _env_int("RAG_TOP_K", 5)
+    prompt_template: str = _env("RAG_PROMPT_TEMPLATE", "grounded")
+    seed: int = _env_int("RAG_SEED", 7)
 
     def validate(self) -> None:
         if self.llm_provider not in {"ollama", "openai_compatible"}:
@@ -36,6 +49,14 @@ class Settings:
             raise ValueError(
                 "RAG_OPENAI_API_KEY is required when RAG_LLM_PROVIDER='openai_compatible'."
             )
+        if self.chunk_size <= 0:
+            raise ValueError("RAG_CHUNK_SIZE must be greater than zero.")
+        if self.chunk_overlap < 0 or self.chunk_overlap >= self.chunk_size:
+            raise ValueError("RAG_CHUNK_OVERLAP must be >= 0 and smaller than chunk size.")
+        if self.top_k <= 0:
+            raise ValueError("RAG_TOP_K must be greater than zero.")
+        if self.prompt_template != "grounded":
+            raise ValueError("RAG_PROMPT_TEMPLATE must be 'grounded'.")
 
 
 settings = Settings()

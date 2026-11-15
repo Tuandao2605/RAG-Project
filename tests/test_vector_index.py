@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 from rag.config import Settings
-from rag.index import build_index, load_index, save_index, search
 from rag.ingest import Chunk
+from rag.vector_index import build_index, load_index, save_index, search
 
 
 def test_build_save_load_and_search_returns_metadata(tmp_path) -> None:
@@ -12,8 +12,8 @@ def test_build_save_load_and_search_returns_metadata(tmp_path) -> None:
     ]
     config = Settings()
     with (
-        patch("rag.index.embed", return_value=[[1.0, 0.0], [0.0, 1.0]]),
-        patch("rag.index.embed_queries", return_value=[[1.0, 0.0]]),
+        patch("rag.vector_index.embed", return_value=[[1.0, 0.0], [0.0, 1.0]]),
+        patch("rag.vector_index.embed_queries", return_value=[[1.0, 0.0]]),
     ):
         data = build_index(chunks, config)
         save_index(data, tmp_path)
@@ -31,6 +31,6 @@ def test_empty_index_returns_empty_results(tmp_path) -> None:
     save_index(data, tmp_path)
     loaded = load_index(tmp_path)
 
-    with patch("rag.index.embed_queries") as embed_query:
+    with patch("rag.vector_index.embed_queries") as embed_query:
         assert search(loaded, "anything", 3, config) == []
         embed_query.assert_not_called()
