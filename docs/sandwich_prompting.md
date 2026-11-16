@@ -1,9 +1,9 @@
 # B1 Sandwich Prompting (ticket 2.7)
 
 `defenses/sandwich.py` exposes `build_prompt(question, chunks, defense_id)` and
-the two stable IDs `b0` and `b1`. The RAG CLI uses the same retrieval call and
-same returned chunk objects for either ID; it changes only the prompt passed to
-the configured chat client.
+the two stable IDs `b0` and `b1`. The RAG CLI sends both IDs through the same
+pipeline, retrieval, artifact logging, and configured chat client; only the
+prompt changes.
 
 ## Prompt variants
 

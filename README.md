@@ -401,6 +401,8 @@ python -m rag.cli build-index `
   --overlap 100
 ```
 
+Lệnh này tạo index demo cho các câu hỏi trong `data\raw`.
+
 Kết quả tạo:
 
 ```text
@@ -417,6 +419,20 @@ python -m pip install -r requirements.txt
 
 Tham số `--overlap` giúp giữ lại một phần ngữ cảnh giữa hai chunk. Khi thư
 mục đầu vào rỗng, index vẫn được lưu hợp lệ và truy vấn sẽ trả về `[]`.
+
+Để chạy benchmark với các case trong `attacks\cases`, tạo index riêng từ
+corpus benchmark:
+
+```powershell
+python -m rag.cli build-index `
+  --input data\corpus\docs.jsonl `
+  --output artifacts\index `
+  --chunk-size 800 `
+  --overlap 100
+```
+
+Không dùng `artifacts\demo-index` cho các SecurityCase hoàn trả hoặc rò rỉ,
+vì hai index chứa các document và `doc_id` khác nhau.
 
 ### Query top-k
 
@@ -445,22 +461,32 @@ Ví dụ kết quả:
 Lệnh `answer` truy xuất top-k một lần rồi gửi cùng chunk/context đến cùng LLM.
 Chỉ prompt thay đổi giữa B0 và B1. B1 Sandwich Prompting đặt chỉ dẫn về cách
 dùng context trước và sau phần tài liệu truy xuất. Thiết lập mặc định là
-temperature `0` và seed `42`; hãy giữ nguyên các tham số khi so sánh hai defense.
+temperature `0` và seed `7`; hãy giữ nguyên các tham số khi so sánh hai defense.
 
 ```powershell
 python -m rag.cli answer `
-  --index artifacts/index `
+  --index artifacts\demo-index `
   --question "Chính sách mật khẩu là gì?" `
   --top-k 3 `
   --defense b1 `
   --temperature 0 `
-  --seed 42
+  --seed 7
 ```
 
 Dùng `--defense b0` để chạy baseline. Cả hai chế độ trả về câu trả lời cùng
 danh sách chunk nguồn đã truy xuất. Chi tiết prompt và protocol ở
 [`docs/sandwich_prompting.md`](./docs/sandwich_prompting.md).
-### B0: chạy từ câu hỏi tới câu trả lời có nguồn
+
+Để tạo artifact cho evaluator, truyền đồng thời `--case`, `--variant` và
+`--artifact`; có thể thêm `--latencies` để ghi sidecar latency. `clean` và
+`attack` là nhãn của lần chạy trong artifact; lệnh `answer` không tự chèn
+payload vào corpus.
+
+Khi dùng `--case`, nếu không truyền `--top-k`, CLI tự dùng
+`retrieval.top_k` trong SecurityCase. Có thể truyền `--top-k` thủ công để
+ghi đè giá trị đó.
+
+### B0/B1: chạy từ câu hỏi tới câu trả lời có nguồn
 
 Lệnh `answer` dùng cùng pipeline cho B0 và các phiên bản defense sau này:
 
@@ -469,14 +495,14 @@ query -> retrieval -> context_before_defense -> defense hook
       -> context_after_defense -> grounded prompt -> LLM -> answer + citations
 ```
 
-Chạy B0 với hook `noop` (không lọc context):
+Chạy B0 với hook baseline:
 
 ```powershell
 python -m rag.cli answer `
   --index artifacts\demo-index `
   --query "Chính sách mật khẩu là gì?" `
   --top-k 3 `
-  --defense noop `
+  --defense b0 `
   --seed 7 `
   --log artifacts/b0-runs.jsonl
 ```
@@ -484,7 +510,56 @@ python -m rag.cli answer `
 Kết quả JSON gồm `answer`, `citations`, context trước/sau defense, cấu hình,
 latency retrieval/defense/LLM/tổng và lỗi nếu có. Mỗi lần chạy được ghi thêm
 một dòng JSONL vào file `--log`. B0 và B1 dùng chung pipeline; B1 chỉ thay
-implementation của defense hook.
+prompt hook. Dùng `--defense b0` cho baseline và `--defense b1` cho Sandwich
+Prompting.
+
+### Chạy benchmark clean/attack cho B0 và B1
+
+Benchmark dùng query hoàn trả và index `artifacts\index` được tạo từ
+`data\corpus\docs.jsonl`. Cần bật Ollama trước khi chạy:
+
+```powershell
+ollama serve
+```
+
+Trong terminal khác, chạy bốn lần để tạo cùng một file artifact:
+
+```powershell
+python -m rag.cli answer `
+  --index artifacts\index `
+  --query "Khách hàng của Sao Mai được yêu cầu hoàn trả trong bao nhiêu ngày?" `
+  --defense b0 `
+  --case attacks\cases\indirect_answer_override.json `
+  --variant clean `
+  --artifact artifacts\runs.jsonl `
+  --latencies artifacts\latencies.jsonl `
+  --log artifacts\b0-clean.trace.jsonl
+
+python -m rag.cli answer `
+  --index artifacts\index `
+  --query "Khách hàng của Sao Mai được yêu cầu hoàn trả trong bao nhiêu ngày?" `
+  --defense b1 `
+  --case attacks\cases\indirect_answer_override.json `
+  --variant clean `
+  --artifact artifacts\runs.jsonl `
+  --latencies artifacts\latencies.jsonl `
+  --log artifacts\b1-clean.trace.jsonl
+```
+
+Chạy `--variant attack` tương tự cho B0 và B1. Khi có `--case`, CLI tự dùng
+`retrieval.top_k` của case nếu không truyền `--top-k`. `clean` và `attack`
+hiện là nhãn của artifact; pipeline chưa tự chèn payload attack vào corpus.
+
+Nếu `answer` trả về `ProviderError`, kiểm tra riêng Ollama trước:
+
+```powershell
+ollama list
+ollama run qwen2.5:3b "Trả lời ngắn: 1+1 bằng mấy?"
+```
+
+Chỉ chạy RAG sau khi `ollama run` trả về câu trả lời. Lỗi
+`CUDA error: device kernel image is invalid` là lỗi môi trường GPU/Ollama,
+không phải lỗi retrieval hoặc prompt của B0/B1.
 
 ### Kiểm thử pipeline
 

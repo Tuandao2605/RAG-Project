@@ -20,6 +20,25 @@ def test_read_documents_supports_markdown_and_jsonl(tmp_path) -> None:
     assert {chunk.doc_id for chunk in chunks} == {"policy", "json-1"}
 
 
+def test_read_documents_uses_nested_corpus_doc_id(tmp_path) -> None:
+    (tmp_path / "corpus.jsonl").write_text(
+        json.dumps(
+            {
+                "metadata": {"doc_id": "doc-refund-policy"},
+                "content": "Khách hàng có thể hoàn trả trong 30 ngày.",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    documents = read_documents(tmp_path)
+
+    assert documents == [
+        ("doc-refund-policy", "Khách hàng có thể hoàn trả trong 30 ngày.")
+    ]
+
+
 def test_chunk_text_rejects_invalid_overlap() -> None:
     with pytest.raises(ValueError, match="overlap"):
         chunk_text("text", chunk_size=10, overlap=10)

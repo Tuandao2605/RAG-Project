@@ -39,7 +39,9 @@ def _read_jsonl(path: Path) -> list[tuple[str, str]]:
             text = record.get("text", record.get("content"))
             if not isinstance(text, str) or not text.strip():
                 raise ValueError(f"JSONL record needs non-empty text in {path}:{line_number}.")
-            doc_id = record.get("doc_id", f"{path.stem}-{line_number}")
+            metadata = record.get("metadata")
+            nested_doc_id = metadata.get("doc_id") if isinstance(metadata, dict) else None
+            doc_id = record.get("doc_id", nested_doc_id or f"{path.stem}-{line_number}")
             if not isinstance(doc_id, str) or not doc_id.strip():
                 raise ValueError(
                     f"JSONL doc_id must be a non-empty string in {path}:{line_number}."

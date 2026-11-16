@@ -3,7 +3,6 @@ from pathlib import Path
 
 from eval.runner import evaluate, load_cases
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

@@ -1,4 +1,4 @@
-"""Defense hook dùng chung cho baseline và các phiên bản có phòng vệ."""
+"""Defense hooks dùng chung cho baseline và các phiên bản có phòng vệ."""
 
 from __future__ import annotations
 
@@ -16,20 +16,28 @@ class ContextDefense(Protocol):
     def apply(self, question: str, contexts: list[Context]) -> list[Context]: ...
 
 
-class NoOpDefense:
-    """Baseline B0: giữ nguyên context và không lọc nội dung."""
+class BaselineDefense:
+    """B0: giữ nguyên context trước khi tạo prompt baseline."""
 
-    name = "noop"
+    name = "b0"
 
     def apply(self, question: str, contexts: list[Context]) -> list[Context]:
         return [dict(context) for context in contexts]
 
 
+class SandwichDefense(BaselineDefense):
+    """B1: giữ nguyên context và chọn prompt Sandwich ở pipeline."""
+
+    name = "b1"
+
+
 def create_defense(name: str) -> ContextDefense:
-    """Tạo defense theo tên CLI, hiện B0 dùng noop."""
-    if name == "noop":
-        return NoOpDefense()
-    raise ValueError(f"Unknown defense {name!r}. Available defenses: noop.")
+    """Tạo hook defense theo ID benchmark."""
+    if name == "b0":
+        return BaselineDefense()
+    if name == "b1":
+        return SandwichDefense()
+    raise ValueError(f"Unknown defense {name!r}. Available defenses: b0, b1.")
 
 
 def public_context(context: Mapping[str, object]) -> Context:

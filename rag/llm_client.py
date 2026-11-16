@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -43,13 +44,39 @@ def chat(
     config: Settings,
     temperature: float = 0.0,
     seed: int | None = None,
+    max_retries: int = 2,
+    retry_delay: float = 0.0,
+    attempts: list[int] | None = None,
 ) -> str:
-    """Gửi một yêu cầu chat không streaming tới LLM provider đã chọn."""
+    """Gửi chat với số lần retry hữu hạn cho lỗi provider tạm thời."""
     config.validate()
     if not math.isfinite(temperature) or temperature < 0:
         raise ValueError("temperature must be a finite non-negative number")
     if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
         raise ValueError("seed must be an integer or None")
+    if isinstance(max_retries, bool) or not isinstance(max_retries, int) or max_retries < 0:
+        raise ValueError("max_retries must be a non-negative integer")
+    if not math.isfinite(retry_delay) or retry_delay < 0:
+        raise ValueError("retry_delay must be a finite non-negative number")
+
+    total_attempts = 0
+    while True:
+        total_attempts += 1
+        try:
+            result = _chat_once(prompt, config, temperature, seed)
+            if attempts is not None:
+                attempts.append(total_attempts)
+            return result
+        except ProviderError:
+            if total_attempts > max_retries:
+                if attempts is not None:
+                    attempts.append(total_attempts)
+                raise
+            if retry_delay:
+                time.sleep(retry_delay)
+
+
+def _chat_once(prompt: str, config: Settings, temperature: float, seed: int | None) -> str:
     if config.llm_provider == "ollama":
         options: dict[str, object] = {"temperature": temperature}
         if seed is not None:
@@ -60,7 +87,7 @@ def chat(
                 "model": config.ollama_llm_model,
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
-                "options": {"seed": config.seed, "temperature": 0},
+                "options": options,
             },
         )
         message = response.get("message")
@@ -77,12 +104,7 @@ def chat(
         payload["seed"] = seed
     response = _post_json(
         f"{config.openai_base_url}/chat/completions",
-        {
-            "model": config.openai_llm_model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0,
-            "seed": config.seed,
-        },
+        payload,
         {"Authorization": "Bearer " + config.openai_api_key},
     )
     choices = response.get("choices")

@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from dataclasses import replace
+from pathlib import Path
 
 from rag.config import Settings, settings
 from rag.defenses import create_defense
@@ -31,11 +32,16 @@ def _parser() -> argparse.ArgumentParser:
 
     answer = commands.add_parser("answer", help="Retrieve context and generate a cited answer.")
     answer.add_argument("--index", required=True, help="Directory containing index artifacts.")
-    answer.add_argument("--query", required=True, help="Question to answer.")
+    answer.add_argument("--query", "--question", dest="query", required=True, help="Question to answer.")
     answer.add_argument("--top-k", type=int, default=None)
-    answer.add_argument("--defense", default="noop", help="Defense hook name.")
+    answer.add_argument("--defense", default="b0", help="Defense hook name.")
+    answer.add_argument("--temperature", type=float, default=0.0)
     answer.add_argument("--seed", type=int, default=None)
     answer.add_argument("--log", default=None, help="JSONL trace output path.")
+    answer.add_argument("--case", default=None, help="SecurityCase JSON for benchmark artifact output.")
+    answer.add_argument("--variant", choices=("clean", "attack"), default=None)
+    answer.add_argument("--artifact", default=None, help="run_result JSONL output path.")
+    answer.add_argument("--latencies", default=None, help="Latency sidecar JSONL output path.")
     return parser
 
 
@@ -51,6 +57,15 @@ def _settings_for_args(args: argparse.Namespace) -> Settings:
     if args.command == "answer" and args.seed is not None:
         updates["seed"] = args.seed
     return replace(settings, **updates)
+
+
+def _load_case(path: str | None) -> dict[str, object] | None:
+    if path is None:
+        return None
+    value = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("--case must contain a JSON object.")
+    return value
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -69,12 +84,29 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
         if args.command == "answer":
+            case = _load_case(args.case)
+            if args.top_k is None and case is not None:
+                retrieval = case.get("retrieval")
+                case_top_k = retrieval.get("top_k") if isinstance(retrieval, dict) else None
+                if not isinstance(case_top_k, int) or case_top_k <= 0:
+                    raise ValueError("SecurityCase retrieval.top_k must be a positive integer.")
+                config = replace(config, top_k=case_top_k)
+            artifact_args = (args.case, args.variant, args.artifact, args.latencies)
+            if any(value is not None for value in artifact_args) and not all(
+                value is not None for value in (args.case, args.variant, args.artifact)
+            ):
+                raise ValueError("--case, --variant and --artifact are required together.")
             result = answer_question(
                 args.query,
                 data,
                 config,
                 create_defense(args.defense),
                 args.log,
+                temperature=args.temperature,
+                artifact_path=args.artifact,
+                latency_path=args.latencies,
+                case=case,
+                variant=args.variant,
             )
             print(json.dumps(result.trace, ensure_ascii=False, indent=2))
             return 0 if result.answer is not None else 1

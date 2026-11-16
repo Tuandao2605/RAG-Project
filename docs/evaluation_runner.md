@@ -24,6 +24,28 @@ python -m eval.runner \
 để đủ điều kiện tính ASR. `--qa` là tùy chọn; trace QA sạch dùng `qa_id` làm
 `case_id` để đo utility.
 
+Pipeline có thể ghi trực tiếp artifact tương thích runner bằng các tham số
+`artifact_path`, `latency_path`, `case` và `variant` của
+`rag.pipeline.answer_question`. Adapter trong `eval/artifacts.py` chuyển trace
+RAG thành `run_result`, còn latency được ghi ở sidecar theo `run_id`:
+
+```python
+answer_question(
+    question,
+    index,
+    config,
+    defense,
+    artifact_path="artifacts/runs.jsonl",
+    latency_path="artifacts/latencies.jsonl",
+    case=case,
+    variant="clean",  # hoặc "attack"
+)
+```
+
+LLM client retry tối đa hai lần mặc định cho `ProviderError`. Số lần retry
+được ghi trong trace và latency sidecar; sau khi hết giới hạn, run có
+`status="error"` và runner báo là `service_error`, không đưa vào mẫu số ASR.
+
 Ví dụ sidecar latency:
 
 ```jsonl

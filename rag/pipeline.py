@@ -9,10 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from defenses.sandwich import build_prompt
+from eval.artifacts import append_jsonl, append_latency, build_run_result
 from rag.config import Settings
 from rag.defenses import Context, ContextDefense, public_context
 from rag.llm_client import ProviderError, chat
-from rag.prompting import build_prompt
 from rag.vector_index import IndexData, search
 
 
@@ -22,7 +23,7 @@ class AnswerResult:
     answer: str | None
 
 
-def _config_snapshot(config: Settings) -> dict[str, object]:
+def _config_snapshot(config: Settings, temperature: float, defense: ContextDefense) -> dict[str, object]:
     model = config.ollama_llm_model if config.llm_provider == "ollama" else config.openai_llm_model
     return {
         "chunk_size": config.chunk_size,
@@ -33,6 +34,9 @@ def _config_snapshot(config: Settings) -> dict[str, object]:
         "model": model,
         "prompt_template": config.prompt_template,
         "seed": config.seed,
+        "provider": config.llm_provider,
+        "defense_id": defense.name,
+        "temperature": temperature,
     }
 
 
@@ -51,6 +55,12 @@ def answer_question(
     config: Settings,
     defense: ContextDefense,
     log_path: str | Path | None = None,
+    *,
+    temperature: float = 0.0,
+    artifact_path: str | Path | None = None,
+    latency_path: str | Path | None = None,
+    case: dict[str, Any] | None = None,
+    variant: str | None = None,
 ) -> AnswerResult:
     """Chạy retrieval, defense, generation và trace trong một pipeline."""
     if not question.strip():
@@ -65,10 +75,12 @@ def answer_question(
         "context_after_defense": [],
         "answer": None,
         "citations": [],
-        "config": _config_snapshot(config),
+        "config": _config_snapshot(config, temperature, defense),
         "latency_ms": {},
+        "retry_count": 0,
         "error": None,
     }
+    attempts: list[int] = []
     try:
         retrieval_started = time.perf_counter()
         contexts = search(data, question, config.top_k, config)
@@ -88,10 +100,11 @@ def answer_question(
             for context in safe_contexts
         ]
 
-        prompt = build_prompt(question, safe_contexts, config.prompt_template)
+        prompt = build_prompt(question, safe_contexts, defense.name)
         llm_started = time.perf_counter()
-        answer = chat(prompt, config)
+        answer = chat(prompt, config, temperature=temperature, seed=config.seed, attempts=attempts)
         trace["latency_ms"]["llm"] = round((time.perf_counter() - llm_started) * 1000, 3)
+        trace["retry_count"] = max(attempts[-1] - 1, 0) if attempts else 0
         trace["answer"] = answer
         return AnswerResult(trace, answer)
     except (OSError, ProviderError, RuntimeError, ValueError) as exc:
@@ -100,3 +113,13 @@ def answer_question(
     finally:
         trace["latency_ms"]["total"] = round((time.perf_counter() - started) * 1000, 3)
         _append_trace(log_path, trace)
+        if case is not None and variant is not None and artifact_path is not None:
+            artifact = build_run_result(trace, case, variant, temperature=temperature)
+            append_jsonl(artifact_path, artifact)
+            if latency_path is not None:
+                append_latency(
+                    latency_path,
+                    trace["run_id"],
+                    trace["latency_ms"]["total"],
+                    retry_count=trace["retry_count"],
+                )

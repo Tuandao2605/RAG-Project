@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from rag.config import Settings
-from rag.llm_client import chat
+from rag.llm_client import ProviderError, chat
 
 
 def test_ollama_chat_returns_message_content() -> None:
@@ -46,3 +46,32 @@ def test_chat_rejects_invalid_sampling_parameters() -> None:
             pass
         else:
             raise AssertionError("invalid sampling parameters should be rejected")
+
+
+def test_chat_retries_provider_errors_with_a_bounded_count() -> None:
+    config = Settings(llm_provider="ollama")
+    attempts = []
+    with patch(
+        "rag.llm_client._chat_once",
+        side_effect=[ProviderError("temporary"), ProviderError("temporary"), "safe response"],
+    ) as request:
+        result = chat("hello", config, max_retries=2, attempts=attempts)
+
+    assert result == "safe response"
+    assert request.call_count == 3
+    assert attempts == [3]
+
+
+def test_chat_does_not_retry_after_limit() -> None:
+    config = Settings(llm_provider="ollama")
+    attempts = []
+    with patch("rag.llm_client._chat_once", side_effect=ProviderError("down")) as request:
+        try:
+            chat("hello", config, max_retries=1, attempts=attempts)
+        except ProviderError:
+            pass
+        else:
+            raise AssertionError("provider error should be raised after retry limit")
+
+    assert request.call_count == 2
+    assert attempts == [2]
