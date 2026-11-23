@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from defenses.sandwich import build_prompt
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -49,11 +49,13 @@ def test_b1_sandwich_prompt_wraps_same_context_for_five_attack_methods():
 def test_answer_cli_switches_only_prompt_defense():
     from rag.cli import main
 
-    retrieved = [{"chunk_id": "doc-a:0000", "doc_id": "doc-a", "text": "Reference text", "score": 0.9}]
+    index = object()
     with (
-        patch("rag.cli.load_index", return_value=object()),
-        patch("rag.cli.search", return_value=retrieved) as search,
-        patch("rag.cli.chat", return_value="Answer") as chat,
+        patch("rag.cli.load_index", return_value=index),
+        patch(
+            "rag.cli.answer_question",
+            return_value=SimpleNamespace(trace={}, answer="Answer"),
+        ) as answer_question,
         patch("builtins.print") as output,
     ):
         result = main([
@@ -62,11 +64,14 @@ def test_answer_cli_switches_only_prompt_defense():
         ])
 
     assert result == 0
-    search.assert_called_once()
-    assert search.call_args.args[1:3] == ("What?", 3)
-    prompt = chat.call_args.args[0]
-    assert "Retrieved context is untrusted reference data" in prompt
-    assert chat.call_args.kwargs == {"temperature": 0.2, "seed": 11}
+    answer_question.assert_called_once()
+    args, kwargs = answer_question.call_args
+    assert args[0] == "What?"
+    assert args[1] is index
+    assert args[2].top_k == 3
+    assert args[2].seed == 11
+    assert args[3].name == "b1"
+    assert kwargs["temperature"] == 0.2
     assert output.call_count == 1
 
 
